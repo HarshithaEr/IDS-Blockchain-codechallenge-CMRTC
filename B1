@@ -1,0 +1,67 @@
+const { Client, AccountId, PrivateKey, TokenCreateTransaction, TokenMintTransaction, TokenAssociateTransaction, TransferTransaction } = require("@hashgraph/sdk");
+
+async function main() {
+    const operatorId = AccountId.fromString("0.0.XXXX"); // Replace with your account ID
+    const operatorKey = PrivateKey.fromString("YOUR_PRIVATE_KEY"); // Replace with your private key
+    
+    const client = Client.forTestnet().setOperator(operatorId, operatorKey);
+
+    // Create a new fungible token
+    const tokenCreateTx = await new TokenCreateTransaction()
+        .setTokenName("MyToken")
+        .setTokenSymbol("MTK")
+        .setTreasuryAccountId(operatorId)
+        .setInitialSupply(1000)
+        .setDecimals(0)
+        .setAdminKey(operatorKey)
+        .freezeWith(client)
+        .sign(operatorKey);
+    
+    const tokenCreateSubmit = await tokenCreateTx.execute(client);
+    const tokenCreateRx = await tokenCreateSubmit.getReceipt(client);
+    const tokenId = tokenCreateRx.tokenId;
+    console.log(`Token Created: MyToken (${tokenId})`);
+
+    // Mint additional tokens
+    const mintTx = await new TokenMintTransaction()
+        .setTokenId(tokenId)
+        .setAmount(500) // Mint 500 more tokens
+        .freezeWith(client)
+        .sign(operatorKey);
+    
+    const mintSubmit = await mintTx.execute(client);
+    await mintSubmit.getReceipt(client);
+    console.log(`Minted 500 additional tokens.`);
+
+    // Distribute tokens to multiple accounts
+    const recipientId1 = AccountId.fromString("0.0.XXXXX"); // Replace with recipient account 1
+    const recipientId2 = AccountId.fromString("0.0.YYYYY"); // Replace with recipient account 2
+    
+    // Associate token with recipient accounts
+    const associateTx1 = await new TokenAssociateTransaction()
+        .setAccountId(recipientId1)
+        .setTokenIds([tokenId])
+        .freezeWith(client)
+        .sign(operatorKey);
+    await associateTx1.execute(client);
+
+    const associateTx2 = await new TokenAssociateTransaction()
+        .setAccountId(recipientId2)
+        .setTokenIds([tokenId])
+        .freezeWith(client)
+        .sign(operatorKey);
+    await associateTx2.execute(client);
+    
+    // Transfer tokens
+    const transferTx = await new TransferTransaction()
+        .addTokenTransfer(tokenId, operatorId, -200)
+        .addTokenTransfer(tokenId, recipientId1, 100)
+        .addTokenTransfer(tokenId, recipientId2, 100)
+        .freezeWith(client)
+        .sign(operatorKey);
+    
+    await transferTx.execute(client);
+    console.log(`Distributed 100 tokens each to two recipients.`);
+}
+
+main().catch(console.error);
