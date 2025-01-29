@@ -1,0 +1,96 @@
+import java.util.*;
+
+class Event {
+    double startTime, endTime;
+    String description;
+
+    public Event(double startTime, double endTime, String description) {
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.description = description;
+    }
+
+    public boolean conflictsWith(Event other) {
+        return !(this.endTime <= other.startTime || this.startTime >= other.endTime);
+    }
+}
+
+class EventManager {
+    private List<Event> events = new ArrayList<>();
+
+    public boolean addEvent(double startTime, double endTime, String description) {
+        Event newEvent = new Event(startTime, endTime, description);
+        
+        for (Event event : events) {
+            if (newEvent.conflictsWith(event)) {
+                System.out.println("Conflict detected with: " + event.description + " (" + event.startTime + " - " + event.endTime + ")");
+                return false;
+            }
+        }
+        
+        events.add(newEvent);
+        System.out.println("Event added successfully.");
+        return true;
+    }
+
+    public double[] suggestAlternative(double startTime, double endTime, double duration) {
+        double availableStart = startTime;
+        
+        while (availableStart + duration <= endTime) {
+            Event proposedEvent = new Event(availableStart, availableStart + duration, "Proposed Event");
+            boolean conflict = false;
+            
+            for (Event event : events) {
+                if (event.conflictsWith(proposedEvent)) {
+                    conflict = true;
+                    break;
+                }
+            }
+            
+            if (!conflict) {
+                return new double[]{availableStart, availableStart + duration};
+            }
+            
+            availableStart += 1;
+        }
+        
+        return null;
+    }
+}
+
+public class EventScheduler {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        EventManager manager = new EventManager();
+        
+        System.out.print("Enter the number of events: ");
+        int n = scanner.nextInt();
+        
+        for (int i = 0; i < n; i++) {
+            System.out.print("Enter start time: ");
+            double startTime = scanner.nextDouble();
+            System.out.print("Enter end time: ");
+            double endTime = scanner.nextDouble();
+            scanner.nextLine(); 
+            System.out.print("Enter event description: ");
+            String description = scanner.nextLine();
+            manager.addEvent(startTime, endTime, description);
+        }
+        
+        System.out.print("Enter duration for alternative suggestion: ");
+        double duration = scanner.nextDouble();
+        System.out.print("Enter start range for alternative suggestion: ");
+        double startRange = scanner.nextDouble();
+        System.out.print("Enter end range for alternative suggestion: ");
+        double endRange = scanner.nextDouble();
+        
+        double[] alternative = manager.suggestAlternative(startRange, endRange, duration);
+        if (alternative != null) {
+            System.out.println("Suggested time slot: " + alternative[0] + " - " + alternative[1]);
+        } else {
+            System.out.println("No available time slots.");
+        }
+        
+        scanner.close();
+    }
+}
